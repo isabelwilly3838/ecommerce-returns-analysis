@@ -7,6 +7,18 @@ SQL investigation in BigQuery → automated Excel reporting workbook (VBA + Powe
 
 **Business question:** Which product categories, channels or fulfilment paths drive returns, and what would it be worth to fix the biggest driver?
 
+## Screenshots
+
+**Weekly report** (built by `vba/WeeklyReport.bas`)
+
+![Weekly returns report](screenshots/weekly_report.png)
+
+**Lookup sheet** (SUMIFS, XLOOKUP and INDEX/MATCH giving the same answer)
+
+![Lookup sheet](screenshots/lookup.png)
+
+**Pivot:** return rate by category and month, with a colour scale: [screenshots/pivot.png](screenshots/pivot.png)
+
 ## Structure
 
 ```
