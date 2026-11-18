@@ -1,0 +1,5 @@
+.DS_Store
+~$*
+*.tmp
+# PDFs the macro exports; remove this line to commit a sample
+excel/*.pdf

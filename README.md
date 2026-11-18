@@ -1,0 +1,103 @@
+# E-commerce Returns: Root-Cause Analysis
+
+> **Summary:** Analysed 63,387 delivered order items (2019–2026) from `thelook_ecommerce`. The return rate is **28.8%** (not the 10% a naive count suggests), and it is flat across category, brand, price, distribution centre, channel and department. The *cost* is concentrated: Outerwear & Coats and Jeans carry 24% of returned revenue at average return rates. Slow delivery (6+ days, +1.6 pp) is the one lead. Recommendation: add return-reason codes and prioritise prevention by value. See [the memo](memo/business_case.md).
+
+An end-to-end business analysis project on Google's public `thelook_ecommerce` dataset:
+SQL investigation in BigQuery → automated Excel reporting workbook (VBA + Power Query) → Power BI KPI dashboard → one-page business case.
+
+**Business question:** Which product categories, channels or fulfilment paths drive returns, and what would it be worth to fix the biggest driver?
+
+## Structure
+
+```
+sql/
+  01_explore.sql              get to know the tables (row counts, date range, statuses)
+  02_return_rate_overview.sql return rate by category, department, distribution centre, channel
+  03_root_cause_drilldown.sql drill into the worst segment (brand, price band, traffic source, delivery time)
+  04_weekly_kpis.sql          weekly KPI table -> export to CSV for Excel and Power BI
+excel/
+  (your workbook goes here: returns_report.xlsm, plus weekly_kpis.csv)
+vba/
+  WeeklyReport.bas            macro: refresh data, build the weekly report sheet, export PDF
+dashboard/
+  metric_definitions.md       one line per KPI: definition, formula, why it matters
+memo/
+  business_case.md            one-page narrative: problem, root cause, recommendation, impact, risks
+screenshots/
+  (workbook and dashboard screenshots for GitHub)
+```
+
+## Steps (tick as you go)
+
+### Week 1: learn the missing Excel skills
+- [ ] VBA basics: record a macro, then read and edit the recorded code. Learn variables, `For Each` loops, `Range`/`Cells`, and `ListObject` (Excel tables)
+- [ ] Power Query: import a CSV, clean the columns, load it as a table, and refresh it (this is the posting's "data links")
+- [ ] Practise pivot tables, INDEX/MATCH, XLOOKUP and conditional formatting on the exported CSV
+
+### Week 2: build the analysis
+- [x] Open the [BigQuery sandbox](https://console.cloud.google.com/bigquery) (free, needs a Google account) and add the `bigquery-public-data` project
+- [x] Run `sql/01` to `sql/03` and note what each result tells you, in `memo/business_case.md` → "Findings"
+- [x] Decide the one root cause you will defend. Stop at evidence, not at a hunch
+- [x] Run `sql/04`, export the result as `excel/weekly_kpis.csv`
+
+### Week 3: build the deliverables
+- [x] Excel: Power Query → `weekly_kpis.csv`, a pivot table by category and week, plus a `Report` sheet
+- [x] Import `vba/WeeklyReport.bas` (VBA editor → File → Import), save as `.xlsm`, and run `BuildWeeklyReport`
+- [ ] Power BI: dashboard on the same CSV, using the metrics in `dashboard/metric_definitions.md`
+- [x] Write the one-page memo
+- [ ] Push to GitHub with screenshots of the workbook and dashboard, and a short summary at the top of this README
+
+## How to run
+
+**BigQuery.** Paste each file into a new query tab and run it. Every query reads from
+`bigquery-public-data.thelook_ecommerce`, so you need no data of your own. The sandbox gives
+you 1 TB of free query processing a month; these queries use a tiny fraction of that.
+`03_root_cause_drilldown.sql` starts with `DECLARE target_category`: set it to the worst
+category you found in `02` before running. The BigQuery UI shows each statement's result
+separately in the results pane.
+
+**Export.** After running `04`, use *Save results → CSV (local file)* and save it as
+`excel/weekly_kpis.csv`.
+
+**Excel workbook setup** (what `WeeklyReport.bas` expects):
+1. Sheet `Data`: *Data → Get Data → From Text/CSV* → `weekly_kpis.csv` → *Transform Data*. Set
+   `week_start` to Date, counts to Whole Number, money columns to Decimal. *Close & Load* as a
+   table, then rename the table to `weekly_kpis` (Table Design → Table Name).
+2. In *Queries & Connections → Properties*, untick **Enable background refresh**, so the macro
+   waits for the refresh to finish.
+3. Sheet `Pivot`: pivot table on `weekly_kpis`, rows = `category`, columns = `week_start`
+   (grouped), values = sum of `items_returned` / sum of `items_delivered`.
+4. Import `vba/WeeklyReport.bas`, save as `returns_report.xlsm`, run `BuildWeeklyReport`. It
+   creates the `Report` sheet if it does not exist, and saves the PDF next to the workbook.
+
+The macro uses no Windows-only libraries, so it runs in Excel for Mac too.
+
+**Power BI.** *Get Data → Text/CSV* → `weekly_kpis.csv`. Build the measures from
+`dashboard/metric_definitions.md` (DAX is given there). Power BI Desktop is Windows-only; on a
+Mac, use a Windows VM or the Power BI web service.
+
+## A note on the data
+
+`thelook_ecommerce` is synthetic data, generated by Google and refreshed daily, so your numbers
+will differ slightly from anyone else's and change over time. Note the date you ran the queries
+in the memo. Synthetic data can also produce return rates that are fairly flat across segments.
+If that is what you find, say so: "no segment differs meaningfully from the average, so the
+fix is process-wide, not targeted" is a valid, defensible finding, and the z-scores in `02`
+and `03` are there to tell real gaps from noise.
+
+## How this maps to the Amazon Business Analyst posting
+
+| Posting | This project |
+|---|---|
+| Knowledge of SQL | `sql/`: CTEs, joins, window functions, on 100k+ rows |
+| Advanced Excel: pivot tables, macros, index/match, vlookup, VBA, data links | `excel/` + `vba/` |
+| Lead root cause analyses | `sql/03` + memo "Root cause" |
+| Own performance metrics dashboards | Power BI dashboard + `dashboard/metric_definitions.md` |
+| Support business cases | `memo/business_case.md` |
+| Present data-driven recommendations | the memo + a 3-minute walkthrough you can give in the interview |
+
+## Rule for the CV
+
+Only add numbers to your CV after you have produced them yourself (rows analysed, return-rate
+gap found, estimated savings). Until the project is finished, list it as "in progress" or leave
+it off.
